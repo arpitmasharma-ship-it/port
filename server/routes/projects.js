@@ -47,7 +47,7 @@ router.post('/', protect, authorize('admin'), upload.array('images', 10), [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
+    return res.status(400).json({ success: false, message: errors.array()[0].msg, errors: errors.array() });
   }
 
   try {
@@ -65,6 +65,10 @@ router.post('/', protect, authorize('admin'), upload.array('images', 10), [
     const project = await Project.create(projectData);
     res.status(201).json({ success: true, data: project });
   } catch (err) {
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join('. ') });
+    }
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -88,12 +92,16 @@ router.put('/:id', protect, authorize('admin'), upload.array('images', 10), asyn
       updateData.featured = req.body.featured === 'true' || req.body.featured === true;
     }
 
-    const project = await Project.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    const project = await Project.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
     res.json({ success: true, data: project });
   } catch (err) {
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, message: messages.join('. ') });
+    }
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

@@ -664,7 +664,7 @@ const ProjectsEditor = ({ projects, onSave }) => {
         toast.success('Project added!');
       }
       setForm(empty); setEditId(null); setImageFiles([]); setImagePreviews([]);
-    } catch (err) { toast.error('Failed to save project'); } finally { setSaving(false); }
+    } catch (err) { toast.error(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Failed to save project'); } finally { setSaving(false); }
   };;
 
   const handleDelete = async (id) => {
@@ -687,7 +687,7 @@ const ProjectsEditor = ({ projects, onSave }) => {
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <textarea placeholder="Short description" rows={2} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} style={{ ...hudInput, resize: 'none' }} />
+        <textarea placeholder="Short description (max 200 chars)" rows={2} maxLength={200} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} style={{ ...hudInput, resize: 'none' }} />
         <textarea placeholder="Full description" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...hudInput, resize: 'none' }} />
         <div className="grid sm:grid-cols-2 gap-4">
           <input placeholder="Technologies (comma separated)" value={form.technologies} onChange={(e) => setForm({ ...form, technologies: e.target.value })} style={hudInput} />
