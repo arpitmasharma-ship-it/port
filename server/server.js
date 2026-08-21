@@ -1,102 +1,128 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
 
-const connectDB = require('./config/db');
+// ===============================
+// LOAD ENVIRONMENT VARIABLES
+// ===============================
+dotenv.config();
 
-// Connect MongoDB
-connectDB();
+// ===============================
+// DATABASE
+// ===============================
+const connectDB = require("./config/db");
 
+// ===============================
+// ROUTES
+// ===============================
+const authRoutes = require("./routes/auth");
+const blogRoutes = require("./routes/blog");
+const educationRoutes = require("./routes/education");
+const experienceRoutes = require("./routes/experience");
+const messagesRoutes = require("./routes/messages");
+const profileRoutes = require("./routes/profile");
+const projectsRoutes = require("./routes/projects");
+const skillsRoutes = require("./routes/skills");
+const testimonialsRoutes = require("./routes/testimonials");
+
+// ===============================
+// CREATE EXPRESS APP
+// ===============================
 const app = express();
 
-
 // ===============================
-// CORS
+// MIDDLEWARE
 // ===============================
-
 app.use(
     cors({
-        origin: [
-            'http://localhost:5173',
-            'http://localhost:3000',
-            process.env.CLIENT_URL
-        ].filter(Boolean),
-
-        credentials: true
+        origin: "*",
+        credentials: true,
     })
 );
-
-
-// ===============================
-// BODY PARSERS
-// ===============================
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 // ===============================
-// STATIC UPLOADS
+// TEST ROUTE
 // ===============================
-
-app.use('/uploads', express.static('uploads'));
-
+app.get("/", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "Portfolio Server is running 🚀",
+    });
+});
 
 // ===============================
 // API ROUTES
 // ===============================
 
-app.use('/api/auth', require('./routes/auth'));
-
-app.use('/api/profile', require('./routes/profile'));
-
-app.use('/api/skills', require('./routes/skills'));
-
-app.use('/api/projects', require('./routes/projects'));
-
-app.use('/api/experience', require('./routes/experience'));
-
-app.use('/api/education', require('./routes/education'));
-
-app.use('/api/testimonials', require('./routes/testimonials'));
-
-app.use('/api/blog', require('./routes/blog'));
-
-app.use('/api/messages', require('./routes/messages'));
-
+app.use("/api/auth", authRoutes);
+app.use("/api/blog", blogRoutes);
+app.use("/api/education", educationRoutes);
+app.use("/api/experience", experienceRoutes);
+app.use("/api/messages", messagesRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/projects", projectsRoutes);
+app.use("/api/skills", skillsRoutes);
+app.use("/api/testimonials", testimonialsRoutes);
 
 // ===============================
-// HEALTH CHECK
+// 404 HANDLER
 // ===============================
-
-app.get('/', (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'Portfolio API is running 🚀'
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: `Route ${req.originalUrl} not found`,
     });
 });
-
 
 // ===============================
 // ERROR HANDLER
 // ===============================
-
 app.use((err, req, res, next) => {
-    console.error('Server Error:', err);
+    console.error("❌ Server Error:", err);
 
-    res.status(500).json({
+    res.status(err.status || 500).json({
         success: false,
-        message: 'Something went wrong!'
+        message: err.message || "Internal Server Error",
     });
 });
 
-
 // ===============================
-// SERVER
+// START SERVER
 // ===============================
-
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-});
+const startServer = async () => {
+    try {
+        console.log(
+            "🔐 MONGODB_URI loaded:",
+            !!process.env.MONGODB_URI
+        );
+
+        // Connect MongoDB first
+        await connectDB();
+
+        // Start Express server only after MongoDB connection
+        app.listen(PORT, () => {
+            console.log("=================================");
+            console.log("🚀 Portfolio Server Started");
+            console.log(`📡 Port: ${PORT}`);
+            console.log(`🌐 http://localhost:${PORT}`);
+            console.log("🗄️ MongoDB Connected Successfully");
+            console.log("=================================");
+        });
+
+    } catch (error) {
+        console.error(
+            "❌ Failed to start server:",
+            error.message
+        );
+
+        process.exit(1);
+    }
+};
+
+// Start application
+startServer();
