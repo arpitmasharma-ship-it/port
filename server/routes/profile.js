@@ -10,15 +10,39 @@ const upload = require('../middleware/upload');
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    let profile = await Profile.findOne().populate('user', 'name email');
+    const User = require('../models/User');
+
+    let profiles = await Profile.find().populate('user', 'name email');
+    let profile = profiles.find((p) => p.user) || profiles[0];
+
+    // Remove stale/duplicate profiles left from old admin accounts
+    if (profile && profiles.length > 1) {
+      await Profile.deleteMany({ _id: { $ne: profile._id } });
+    }
+
     if (!profile) {
+      const admin = await User.findOne();
+      if (!admin) {
+        return res.json({ success: true, data: null });
+      }
       profile = await Profile.create({
-        user: (await require('../models/User').findOne())._id,
+        user: admin._id,
         name: 'Your Name',
         title: 'Full Stack Developer',
         bio: 'Passionate developer building amazing things.'
       });
+    } else if (!profile.user) {
+      // Profile belongs to a deleted user -> re-link to current admin
+      const admin = await User.findOne();
+      if (admin) {
+        profile = await Profile.findByIdAndUpdate(
+          profile._id,
+          { user: admin._id },
+          { new: true }
+        ).populate('user', 'name email');
+      }
     }
+
     res.json({ success: true, data: profile });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
@@ -47,8 +71,12 @@ router.put('/', protect, authorize('admin'), upload.fields([{ name: 'avatar', ma
     let profile = await Profile.findOneAndUpdate(
       { user: req.user.id },
       updateData,
-      { new: true, upsert: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
     );
+
+    // Ensure only the current admin's profile remains
+    await Profile.deleteMany({ _id: { $ne: profile._id } });
+
     res.json({ success: true, data: profile });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });

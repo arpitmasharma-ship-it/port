@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const dotenv = require("dotenv");
 const cors = require("cors");
 
@@ -61,6 +62,9 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files (avatar, resume, project images)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ===============================
 // TEST ROUTE
