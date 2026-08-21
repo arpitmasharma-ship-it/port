@@ -13,6 +13,25 @@ dotenv.config();
 const connectDB = require("./config/db");
 
 // ===============================
+// ADMIN AUTO-SEED
+// ===============================
+const User = require("./models/User");
+
+const ensureAdmin = async () => {
+    const email = (process.env.ADMIN_EMAIL || "arpit.admin").toLowerCase();
+    const password = process.env.ADMIN_PASSWORD || "OyEXIRTrONEl";
+
+    const existing = await User.findOne({ email });
+
+    if (!existing) {
+        // Only this admin may exist
+        await User.deleteMany({});
+        await User.create({ name: "Arpit Sharma", email, password });
+        console.log("👑 Admin account created");
+    }
+};
+
+// ===============================
 // ROUTES
 // ===============================
 const authRoutes = require("./routes/auth");
@@ -103,6 +122,9 @@ const startServer = async () => {
 
         // Connect MongoDB first
         await connectDB();
+
+        // Ensure the single admin account exists
+        await ensureAdmin();
 
         // Start Express server only after MongoDB connection
         app.listen(PORT, () => {
